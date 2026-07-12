@@ -83,7 +83,10 @@ RESULTS = {
 user_answers = {}
 
 # --- Логирование ---
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", 
+    level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
 # === ВЕБ-СЕРВЕР ДЛЯ RENDER ===
@@ -92,12 +95,15 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"OK")
-    def log_message(self, format, *args): pass
+    def log_message(self, format, *args): 
+        pass
 
 def run_health_server():
     try:
-        server = HTTPServer(('0.0.0.0', 10000), HealthCheckHandler)
-        logger.info("✅ Health check server started")
+        # Используем порт из переменной окружения или 10000
+        port = int(os.environ.get("PORT", 10000))
+        server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+        logger.info(f"✅ Health check server started on port {port}")
         server.serve_forever()
     except Exception as e:
         logger.error(f"Health server error: {e}")
@@ -178,7 +184,7 @@ def log_to_sheets(user_id, username, first_name, answers, result):
         message = "\n".join([f"{i+1}. {a['answer']}" for i, a in enumerate(answers)])
         status = result['title']
         source = "Telegram бот"
-        response_time = "—"  # TODO: можно добавить замер времени
+        response_time = "—"
         
         row = [
             timestamp,
@@ -218,6 +224,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик команды /help"""
+    help_text = (
+        "🤖 **Помощь по боту**\n\n"
+        "📌 **Команды:**\n"
+        "/start - Начать работу с ботом\n"
+        "/help - Показать эту справку\n\n"
+        "📊 **Диагностика:**\n"
+        "Бот задаст 4 вопроса о вашем бизнесе и даст рекомендацию.\n\n"
+        "📞 **Контакты руководителя:**\n"
+        f"{', '.join(MANAGER_CONTACTS)}\n\n"
+        "❓ По всем вопросам обращайтесь к администратору."
+    )
+    await update.message.reply_text(help_text, parse_mode='Markdown')
+
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -226,6 +247,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     logger.info(f"🔘 Кнопка: {data} от {user_id}")
 
+    # Обработка кнопки "Начать диагностику"
     if data == "start_diagnostic":
         user_answers[user_id] = []
         await query.edit_message_text(
@@ -234,6 +256,16 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    # Обработка кнопки "Связаться с руководителем"
+    if data == "contact_manager":
+        contacts = ", ".join(MANAGER_CONTACTS)
+        await query.edit_message_text(
+            f"📞 Свяжитесь с нашим руководителем:\n\n{contacts}\n\n"
+            "Он поможет вам детально разобрать ваш кейс и предложит решение."
+        )
+        return
+
+    # Обработка ответов на вопросы
     if data.startswith("q"):
         parts = data.split("_")
         if len(parts) < 2:
@@ -298,12 +330,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await notify_admin(context, user_id, query.from_user.username, query.from_user.first_name, result, user_answers[user_id])
             return
 
-    elif data == "contact_manager":
-        contacts = ", ".join(MANAGER_CONTACTS)
-        await query.edit_message_text(
-            f"📞 Свяжитесь с нашим руководителем:\n\n{contacts}\n\n"
-            "Он поможет вам детально разобрать ваш кейс и предложит решение."
-        )
+    # Если ничего не подошло
+    await query.edit_message_text("❌ Неизвестная команда. Используйте /start")
 
 async def notify_admin(context, user_id, username, first_name, result, answers):
     try:
@@ -328,7 +356,9 @@ def main():
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_error_handler(error_handler)
 
+    # Добавляем обработчики команд
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CallbackQueryHandler(button_callback))
 
     logger.info("🚀 Бот запущен!")
