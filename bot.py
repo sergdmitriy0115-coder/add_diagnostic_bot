@@ -15,6 +15,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 # --- НАСТРОЙКИ (ТВОИ ДАННЫЕ) ---
 BOT_TOKEN = "7582978597:AAFeGb-xtXNw8QYHH3aVrmxKO_3geWqFoTU"
 ADMIN_ID = 7675037573
+GROUP_CHAT_ID = -1004446762925  # ← ID ГРУППЫ
 LOG_FILE = "logs.txt"
 
 # --- GOOGLE SHEETS ---
@@ -29,33 +30,33 @@ QUESTIONS = [
     {
         "text": "📊 Сколько заявок в месяц поступает в ваш бизнес?",
         "buttons": [
-            {"text": "До 10", "value": "до_10", "score": 0},
+            {"text": "До 10", "value": "do_10", "score": 0},
             {"text": "10–30", "value": "10_30", "score": 1},
             {"text": "30–100", "value": "30_100", "score": 2},
-            {"text": "Более 100", "value": "более_100", "score": 3}
+            {"text": "Более 100", "value": "bolee_100", "score": 3}
         ]
     },
     {
         "text": "👥 Есть ли сейчас менеджеры по продажам?",
         "buttons": [
-            {"text": "Да, есть команда", "value": "есть_команда", "score": 2},
-            {"text": "Нет, ищем", "value": "нет_ищем", "score": 1}
+            {"text": "Да, есть команда", "value": "est_komanda", "score": 2},
+            {"text": "Нет, ищем", "value": "net_ishchem", "score": 1}
         ]
     },
     {
         "text": "🎯 Готовы ли нанимать и обучать менеджеров?",
         "buttons": [
-            {"text": "Да, готовы", "value": "готовы", "score": 2},
-            {"text": "Нет, ищем под ключ", "value": "под_ключ", "score": 1}
+            {"text": "Да, готовы", "value": "gotovy", "score": 2},
+            {"text": "Нет, ищем под ключ", "value": "pod_kluch", "score": 1}
         ]
     },
     {
         "text": "💰 Какой бюджет на отдел продаж?",
         "buttons": [
-            {"text": "До 100 000 ₽", "value": "до_100к", "score": 1},
-            {"text": "100 000 – 300 000 ₽", "value": "100_300к", "score": 2},
-            {"text": "Более 300 000 ₽", "value": "более_300к", "score": 3},
-            {"text": "Не знаю", "value": "не_знаю", "score": 1}
+            {"text": "До 100 000 ₽", "value": "do_100k", "score": 1},
+            {"text": "100 000 – 300 000 ₽", "value": "100_300k", "score": 2},
+            {"text": "Более 300 000 ₽", "value": "bolee_300k", "score": 3},
+            {"text": "Не знаю", "value": "ne_znayu", "score": 1}
         ]
     }
 ]
@@ -100,7 +101,6 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
 
 def run_health_server():
     try:
-        # Используем порт из переменной окружения или 10000
         port = int(os.environ.get("PORT", 10000))
         server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
         logger.info(f"✅ Health check server started on port {port}")
@@ -115,7 +115,14 @@ async def send_error_notification(context, error_title, error_details, user_info
         message = f"🚨 ОШИБКА В БОТЕ\n\n⏰ Время: {error_time}\n📌 Тип: {error_title}\n\n📋 Детали:\n{error_details[:1500]}\n"
         if user_info:
             message += f"\n👤 Пользователь: {user_info}"
+        
+        # Отправляем админу
         await context.bot.send_message(chat_id=ADMIN_ID, text=message)
+        
+        # Отправляем в группу
+        if GROUP_CHAT_ID:
+            await context.bot.send_message(chat_id=GROUP_CHAT_ID, text=f"⚠️ Ошибка в боте: {error_title[:100]}")
+        
         logger.info(f"✅ Уведомление отправлено")
     except Exception as e:
         logger.error(f"❌ Ошибка отправки уведомления: {e}")
@@ -136,12 +143,11 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def init_google_sheets():
     logger.info("🔄 Подключение к Google Sheets...")
     try:
-        # Твой JSON-ключ
         creds_dict = {
             "type": "service_account",
             "project_id": "my-project-add-01",
-            "private_key_id": "6f2a80c82ef9bcf7882db291a82baf8acf9f4bfc",
-            "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCnVxDJIYKp6cLk\nwISC6NKWYWVlDXq/9vGc580Z9sxwpDYLdFv3OYgAHG+bv00aPAFaWL127dZrNKbZ\ntWvcCH82MgjxK4rh1iUNdJDpluupuN+v6CsDkLDNudtpOfzVAq293ONzy07Oa/zC\nkaHQn4eAiLQIiAmXMuAIHyDjGa7O9D6kDqtS/K1p3Z40rVebbGKIZkex9sd1Traa\nmUlIxm66TT6CnlRUduaOW89APuQBO5BVIbvH5Yt5wGp3r915HUhSx7pn5bMm/MNa\n1N6d8LLReLmhPvFljgBmeqa4EvK+D1r15mDbNVxCB7ZH2UeJXHO8CJavAQuBkNpA\nxNEdePb7AgMBAAECggEAF54Mou5lVBjHZmSbbyRv8ERvvIrh+6zdHdGDW3o/EVjD\nveseva4zeRyKTfd6aMz2PeuPVfUsUXYdZFWcEvJqDdqS84K7N7NzCEqe1zDzMsGC\nZH/Gblrh8S8dfeTuv5uArO67dVDI3w5TnpxSM7EIPUZN7nRQsjO+dbb6+8JYryGE\nN0rQetP3avRB05R6nYtRKy5cHcUDF9gXq9pK0t0HWKbUGz2t6J+lQpvsdZuxIDy0\nLGxjekXp2viFmPYTWpnLmVIJTtZEl9oGjS0tk3iSrkAv1E05zdtcY2Tz/G++8Lj2\nHCADRxudKaLov4/3JfOdu+qAsl6QJhUCiqY6DRAcIQKBgQDPSort+SD53pblhsoG\na/8QKZdu6FABsaHXhG+LOtOvfaS3nxNVXhLUQ1LsonX8ATzMNY821057881SOAfD\nb/Q653vgz03/ymox8G5XZl+xKYYCLlc/Dhskti8nGZ5NfeNjYfYcWH/u7wuikvVP\n+Ns1c4jnB55sEBTLLxbDlMfhWwKBgQDOqUsQKDwJ7TwZdP00Jrl0rR6o2OXk5C1O\nkl2JDGN4Z/RT2ad/0alrecpKmT3V+GN/6M+z0gmZW9eYdrAbA3DegMw2kTNfcO0B\ngKkSKopKYfhVNYP8mN94bmZj47Ya/YAKiMuK7oq9yeJB4wIy0tb325UiAXCHtMNv\nU2tqHrKS4QKBgE7TALt3ZaO+kdDcDYydmpMxzaTd8DaEro8+jA/8oax08aLlebuX\nlz9iDnFvYcAfVFgu8bOf8fdOgUAHkGQv+UZA6ilVi0p+VR2CWOMhSbgbmxrPNlwC\n6C1wncOXiUvcWBBdmvGycYuRGPKMQX5Umj7cHS4FBqf/AXk2AckDlXJLAoGAS5+r\ntjfi8Ib9jRtAZMse5lFLfOISDlZpNe1diP8djzwLLnvhTWa9pnSkz/OPqzL/xhi9\nmMHtfU8cb9BO1TPHI8Th9b3gnLZIJFqeg+VJQbrkEtpIeDDA5eMQWNFFHE9TgYdZ\nZHeyEY1E3HNjpJF+1KhnxE/ei+pb8esGzYh6NEECgYBCsBkNYEv4fewsTcn1+hsA\n/GUZRDeiM7gh8u4zTj1dFfc5y5NaARshZTeEB8/ilk59ngB9xVyMirVtDk64GH4b\nlknZGZA32+txtswK3cKM1FgVvdLZKqpvlwobacGlD8b97TIeBBWiSLonVy/nWry8\n58dzVIH9BqBfq6c3naFfFw==\n-----END PRIVATE KEY-----\n",
+            "private_key_id": "3e07a1216dbba1cd0a8fb64aa012775d9dbee8fb",
+            "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDBZC1EYrFD+Y5H\nUZEAD3g++E7fz0eVuz/wsLcHmHaMWunV42+NSkupJeC0AXaFOMeCY5d1bfx8+QI0\nZYv1zg6U4VzVosLb+SCr/jQUadXn+rf1CgV7R5p4EilCrdvti5ST+XQWwBNT4x/A\n1xfSZfnvrk0aHF9H0ErOPoQMjGDcjHXvxas0/BP8g+Fa97pbLh0uk2bNae5nOsCg\nmS/jaTVeBd3zQDbCzSEbForS3Vysjs0Zp50mMM5V1YmZ0xtIVlIUg4g9u6m8trHx\nrUeySs+0lGHpdLTQrTUcuUozKuOYzX/cHK/N+nNwGnvDUb8IgDinW2SBXn2ryqAG\ngJkBImddAgMBAAECggEABDZuAatDBcJJ+LXnOkYGqPEolK7+S0hu1OEgkjQzwYxv\nGLc8KZV9+Zix4PHsNpbdSl2S1x5sItPGGhqWgSZPLSvjOrhxgAWt/MPMN3VJESUm\nEdrOnO1wc7T05vcvDykHIERi5JD5YCPWf/v00KLjM3b2Rn8/jb//in0UTCADByLS\nud0Zw0NO7pZhcaUZWOiUUmsK/r54/n0152ZfdAmbcP3ArnRTKWSCIsFfAt2yp9Ez\nkJ+Hns0XZ0KL7F19IhOXPkP/FRlOwjt5SL+5NMJ3fSGznv/QU9q+l1A0jzSZtDmm\nvkXYmeaIombou1QPnpTWmdOb4966j2LnbliDjv4R+QKBgQD3zBsmCgSZAkR3LSy3\npvW8OZGem4bFdpPiaoanwGVpHRW0tzHHhenBlMXMACCponKNsE/TQ27LBPbqbWWu\n5aaeHxzjZV5l60pJGXRhIC1PEa1z0Pj+A4Qyz1YndB+4cNTKm5DV3xT0aQUgfdre\nSYUMiMCUeuH1bxTz8QLk6e18RQKBgQDHywV9USZmABgqxK+9YQMX1o+gwHxR2QTi\nBFmZroh04+isV9XlkVG984XDOAwuTp9xwh8Ionogit/+XZfJ+x3Pc2hnlsQxS7Ia\nlurErnorID7MYGdkT+Ox8Jf8A2mCXmhIec8x87bKfWJ4xbuwG9Vv0I+n2HfxKnhJ\nVhKPQNyMOQKBgHTbQipMKyLlGNiC60WobNZY570+Zu4UH2V1Cw9tAeXyG1xf0A/h\nrPznZefwX3bf7tm2vc5JTKRdMPwYnw09q7eBwKPUGBJERYH3iRSMkhFpqrylXeac\nTemQMXblolfejdsGReU2ELG6HPrXnzGYxi/FBdx/nrOZsO3hSJYfYylpAoGAUMlj\nGt0pba00GHcXqLgFjCoSQaoTmvTp6IphwKa2Pq25c5bAwucT6n8B44JSSpc4GcOo\n0NECGQ6OrEgkDGQiFbRQzzJDertk9SN5IrZ6Z93OBs4kgIddRqJGkny+uRx7hnLa\nuRQXIaG5o6Qw1HEsyN3IeNIrDbViliTbtFlB1OECgYAieyFWJh+Fr1aM2i8rpI6E\n1wD5hDWjNvMz3NLh+KOHqa4pw6lBd/w37HOv1rwlnM6z8I7zfuVTVgKC+Z8OrQrA\nAQkujMDlJKxOw8ghDgDAAGDbxlWuB/opAiaKr590djmVxyovBCuW+he5T1pxoVEW\nNUC9Kr1xOfQaZu5iQG0YFA==\n-----END PRIVATE KEY-----\n",
             "client_email": "add-new-bot@my-project-add-01.iam.gserviceaccount.com",
             "client_id": "109256266568147492925",
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -180,7 +186,6 @@ def log_to_sheets(user_id, username, first_name, answers, result):
     
     try:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        # Формируем сообщение из ответов
         message = "\n".join([f"{i+1}. {a['answer']}" for i, a in enumerate(answers)])
         status = result['title']
         source = "Telegram бот"
@@ -193,7 +198,7 @@ def log_to_sheets(user_id, username, first_name, answers, result):
             first_name or "нет",
             message,
             status,
-            "",  # заметки
+            "",
             source,
             response_time
         ]
@@ -239,6 +244,17 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(help_text, parse_mode='Markdown')
 
+async def get_chat_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Временная команда для получения chat_id группы"""
+    chat_id = update.message.chat.id
+    chat_type = update.message.chat.type
+    await update.message.reply_text(
+        f"📌 **Информация о чате**\n\n"
+        f"🆔 Chat ID: `{chat_id}`\n"
+        f"📋 Тип: {chat_type}\n\n"
+        f"Скопируйте этот ID и вставьте в код: `GROUP_CHAT_ID = {chat_id}`"
+    )
+
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -247,7 +263,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     logger.info(f"🔘 Кнопка: {data} от {user_id}")
 
-    # Обработка кнопки "Начать диагностику"
+    # 1. ОБРАБОТКА СТАРТА ДИАГНОСТИКИ
     if data == "start_diagnostic":
         user_answers[user_id] = []
         await query.edit_message_text(
@@ -256,7 +272,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Обработка кнопки "Связаться с руководителем"
+    # 2. ОБРАБОТКА КНОПКИ "СВЯЗАТЬСЯ С РУКОВОДИТЕЛЕМ"
     if data == "contact_manager":
         contacts = ", ".join(MANAGER_CONTACTS)
         await query.edit_message_text(
@@ -265,16 +281,19 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Обработка ответов на вопросы
+    # 3. ОБРАБОТКА ОТВЕТОВ НА ВОПРОСЫ
     if data.startswith("q"):
         parts = data.split("_")
         if len(parts) < 2:
-            await query.edit_message_text("❌ Ошибка")
+            await query.edit_message_text("❌ Ошибка в данных кнопки")
             return
 
+        # Извлекаем индекс вопроса (убираем "q")
         question_index = int(parts[0][1:])
+        # Собираем ответ (все части после индекса)
         answer_value = "_".join(parts[1:])
 
+        # Ищем выбранный ответ
         selected_answer = None
         for btn in QUESTIONS[question_index]["buttons"]:
             if btn["value"] == answer_value:
@@ -282,9 +301,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 break
 
         if not selected_answer:
-            await query.edit_message_text("❌ Ошибка")
+            await query.edit_message_text("❌ Ошибка: ответ не найден")
             return
 
+        # Сохраняем ответ
         if user_id not in user_answers:
             user_answers[user_id] = []
         user_answers[user_id].append({
@@ -293,12 +313,14 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "score": selected_answer["score"]
         })
 
+        # Показываем следующий вопрос или результат
         if question_index + 1 < len(QUESTIONS):
             await query.edit_message_text(
                 text=QUESTIONS[question_index + 1]["text"],
                 reply_markup=get_question_keyboard(question_index + 1)
             )
         else:
+            # Подсчёт результата
             total_score = sum(item["score"] for item in user_answers[user_id])
             logger.info(f"📊 Пользователь {user_id}: сумма баллов = {total_score}")
 
@@ -314,6 +336,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Запись в Google Sheets
             log_to_sheets(user_id, query.from_user.username, query.from_user.first_name, user_answers[user_id], result)
 
+            # Отправка в группу
+            await send_to_group(context, user_id, query.from_user.username, query.from_user.first_name, result, user_answers[user_id])
+
+            # Отправка админу
+            await notify_admin(context, user_id, query.from_user.username, query.from_user.first_name, result, user_answers[user_id])
+
+            # Финальное сообщение
             final_text = (
                 f"{result['title']}\n\n"
                 f"{result['description']}\n\n"
@@ -326,13 +355,49 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             await query.edit_message_text(final_text, reply_markup=reply_markup)
-
-            await notify_admin(context, user_id, query.from_user.username, query.from_user.first_name, result, user_answers[user_id])
             return
 
-    # Если ничего не подошло
+    # 4. ЕСЛИ НИЧЕГО НЕ ПОДОШЛО
     await query.edit_message_text("❌ Неизвестная команда. Используйте /start")
 
+# === ОТПРАВКА В ГРУППУ ===
+async def send_to_group(context, user_id, username, first_name, result, answers):
+    """Отправляет уведомление в группу Telegram"""
+    if not GROUP_CHAT_ID:
+        logger.warning("⚠️ GROUP_CHAT_ID не задан, пропускаем отправку в группу")
+        return
+    
+    try:
+        # Формируем красивое сообщение
+        text = (
+            f"🔔 **НОВАЯ ДИАГНОСТИКА!**\n\n"
+            f"👤 **Клиент:** {first_name}\n"
+            f"🆔 **ID:** `{user_id}`\n"
+            f"📱 **Username:** @{username if username else 'нет'}\n"
+            f"⏰ **Время:** {datetime.now().strftime('%H:%M:%S')}\n\n"
+            f"📊 **Результат:** {result['title']}\n\n"
+            f"📋 **Ответы:**\n"
+        )
+        
+        for i, ans in enumerate(answers, 1):
+            text += f"{i}. {ans['answer']}\n"
+        
+        # Добавляем кнопку для связи
+        keyboard = [[InlineKeyboardButton("📞 Связаться с клиентом", callback_data=f"contact_{user_id}")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # Отправляем в группу
+        await context.bot.send_message(
+            chat_id=GROUP_CHAT_ID, 
+            text=text, 
+            parse_mode='Markdown',
+            reply_markup=reply_markup
+        )
+        logger.info(f"✅ Уведомление отправлено в группу для {user_id}")
+    except Exception as e:
+        logger.error(f"❌ Ошибка отправки в группу: {e}")
+
+# === УВЕДОМЛЕНИЕ АДМИНА ===
 async def notify_admin(context, user_id, username, first_name, result, answers):
     try:
         text = (
@@ -359,6 +424,9 @@ def main():
     # Добавляем обработчики команд
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("getchatid", get_chat_id))
+    
+    # Добавляем обработчик кнопок
     app.add_handler(CallbackQueryHandler(button_callback))
 
     logger.info("🚀 Бот запущен!")
