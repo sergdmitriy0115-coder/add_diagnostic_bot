@@ -139,23 +139,20 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.critical(f"❌ Критическая ошибка: {e}")
 
-# === GOOGLE SHEETS ===
+# === GOOGLE SHEETS (БЕЗОПАСНО - ИЗ ПЕРЕМЕННОЙ ОКРУЖЕНИЯ) ===
 def init_google_sheets():
     logger.info("🔄 Подключение к Google Sheets...")
     try:
-        creds_dict = {
-            "type": "service_account",
-            "project_id": "my-project-add-01",
-            "private_key_id": "3e07a1216dbba1cd0a8fb64aa012775d9dbee8fb",
-            "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDBZC1EYrFD+Y5H\nUZEAD3g++E7fz0eVuz/wsLcHmHaMWunV42+NSkupJeC0AXaFOMeCY5d1bfx8+QI0\nZYv1zg6U4VzVosLb+SCr/jQUadXn+rf1CgV7R5p4EilCrdvti5ST+XQWwBNT4x/A\n1xfSZfnvrk0aHF9H0ErOPoQMjGDcjHXvxas0/BP8g+Fa97pbLh0uk2bNae5nOsCg\nmS/jaTVeBd3zQDbCzSEbForS3Vysjs0Zp50mMM5V1YmZ0xtIVlIUg4g9u6m8trHx\nrUeySs+0lGHpdLTQrTUcuUozKuOYzX/cHK/N+nNwGnvDUb8IgDinW2SBXn2ryqAG\ngJkBImddAgMBAAECggEABDZuAatDBcJJ+LXnOkYGqPEolK7+S0hu1OEgkjQzwYxv\nGLc8KZV9+Zix4PHsNpbdSl2S1x5sItPGGhqWgSZPLSvjOrhxgAWt/MPMN3VJESUm\nEdrOnO1wc7T05vcvDykHIERi5JD5YCPWf/v00KLjM3b2Rn8/jb//in0UTCADByLS\nud0Zw0NO7pZhcaUZWOiUUmsK/r54/n0152ZfdAmbcP3ArnRTKWSCIsFfAt2yp9Ez\nkJ+Hns0XZ0KL7F19IhOXPkP/FRlOwjt5SL+5NMJ3fSGznv/QU9q+l1A0jzSZtDmm\nvkXYmeaIombou1QPnpTWmdOb4966j2LnbliDjv4R+QKBgQD3zBsmCgSZAkR3LSy3\npvW8OZGem4bFdpPiaoanwGVpHRW0tzHHhenBlMXMACCponKNsE/TQ27LBPbqbWWu\n5aaeHxzjZV5l60pJGXRhIC1PEa1z0Pj+A4Qyz1YndB+4cNTKm5DV3xT0aQUgfdre\nSYUMiMCUeuH1bxTz8QLk6e18RQKBgQDHywV9USZmABgqxK+9YQMX1o+gwHxR2QTi\nBFmZroh04+isV9XlkVG984XDOAwuTp9xwh8Ionogit/+XZfJ+x3Pc2hnlsQxS7Ia\nlurErnorID7MYGdkT+Ox8Jf8A2mCXmhIec8x87bKfWJ4xbuwG9Vv0I+n2HfxKnhJ\nVhKPQNyMOQKBgHTbQipMKyLlGNiC60WobNZY570+Zu4UH2V1Cw9tAeXyG1xf0A/h\nrPznZefwX3bf7tm2vc5JTKRdMPwYnw09q7eBwKPUGBJERYH3iRSMkhFpqrylXeac\nTemQMXblolfejdsGReU2ELG6HPrXnzGYxi/FBdx/nrOZsO3hSJYfYylpAoGAUMlj\nGt0pba00GHcXqLgFjCoSQaoTmvTp6IphwKa2Pq25c5bAwucT6n8B44JSSpc4GcOo\n0NECGQ6OrEgkDGQiFbRQzzJDertk9SN5IrZ6Z93OBs4kgIddRqJGkny+uRx7hnLa\nuRQXIaG5o6Qw1HEsyN3IeNIrDbViliTbtFlB1OECgYAieyFWJh+Fr1aM2i8rpI6E\n1wD5hDWjNvMz3NLh+KOHqa4pw6lBd/w37HOv1rwlnM6z8I7zfuVTVgKC+Z8OrQrA\nAQkujMDlJKxOw8ghDgDAAGDbxlWuB/opAiaKr590djmVxyovBCuW+he5T1pxoVEW\nNUC9Kr1xOfQaZu5iQG0YFA==\n-----END PRIVATE KEY-----\n",
-            "client_email": "add-new-bot@my-project-add-01.iam.gserviceaccount.com",
-            "client_id": "109256266568147492925",
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/add-new-bot%40my-project-add-01.iam.gserviceaccount.com",
-            "universe_domain": "googleapis.com"
-        }
+        # Безопасно: ключ из переменной окружения
+        creds_json = os.environ.get("GOOGLE_CREDENTIALS")
+        if not creds_json:
+            logger.error("❌ GOOGLE_CREDENTIALS не найдена в переменных окружения")
+            logger.info("ℹ️ Добавьте переменную GOOGLE_CREDENTIALS в Render Environment Variables")
+            return None
+        
+        # Парсим JSON из переменной окружения
+        creds_dict = json.loads(creds_json)
+        logger.info("✅ Ключ Google Sheets загружен из переменной окружения")
         
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
@@ -172,6 +169,10 @@ def init_google_sheets():
             logger.info("✅ Создан новый лист с заголовками")
             
         return worksheet
+    except json.JSONDecodeError as e:
+        logger.error(f"❌ Ошибка парсинга GOOGLE_CREDENTIALS: {e}")
+        logger.info("ℹ️ Проверьте, что в переменной окружения валидный JSON")
+        return None
     except Exception as e:
         logger.error(f"❌ Ошибка подключения к Google Sheets: {e}")
         return None
